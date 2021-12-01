@@ -1,0 +1,106 @@
+/* vim: set filetype=cpp: */
+#ifndef BAG
+#define BAG
+#include <list>
+#include <memory>
+#include <atomic>
+namespace tregana {
+
+struct bag_context
+{
+  std::exception exception;
+};
+template<typename T>
+struct bag
+{
+  bag();
+  ~bag() = default;
+  auto insert(bag_context&, const T&) noexcept -> bag<T>&;
+  auto insert(bag_context&, T&&) noexcept -> bag<T>&;
+  auto remove(bag_context&, const T&) -> bag<T>&;
+  auto consume(bag_context&) -> std::unique_ptr<T>;
+  auto size() const noexcept -> size_t;
+  auto contains(const T&) const noexcept -> std::pair<size_t, size_t>;
+private:
+  std::atomic<size_t> size_;
+  std::list<std::unique_ptr<T>> dll_;
+};
+
+template<typename T>
+bag<T>::bag()
+  : size_{0}
+  , dll_{}
+{
+}
+template<typename T>
+size_t bag<T>::size() const noexcept
+{
+  return size_.load();
+}
+
+template<typename T>
+bag<T>& bag<T>::insert(bag_context&ctxt, const T& t) noexcept
+{
+  try
+  {
+    dll_.emplace_back(new T{t});
+    ++size_;
+  }
+  catch(const std::bad_alloc& e)
+  {
+    ctxt.exception = e;
+  }
+  return *this;
+}
+template<typename T>
+bag<T>& bag<T>::insert(bag_context&ctxt, T&& t) noexcept
+{
+  try
+  {
+    dll_.emplace_back(new T{t});
+    ++size_;
+  }
+  catch (const std::bad_alloc& e)
+  {
+    ctxt.exception = e;
+  }
+  return *this;
+}
+template<typename T>
+std::pair<size_t, size_t> bag<T>::contains(const T&t) const noexcept
+{
+  std::pair<size_t, size_t> rval{0, size()};
+  for (auto it{dll_.begin()}; it != dll_.end(); ++rval.first, ++it)
+  {
+    if (t.size() == (*it)->size() and std::equal((*it)->begin(), (*it)->end(), t.begin()))
+    {
+      break;
+    }
+  }
+  return rval;
+}
+template<typename T>
+bag<T>& bag<T>::remove(bag_context&ctxt, const T&t)
+{
+  auto pos = contains(t);
+  if (pos.first < pos.second)
+  {
+    auto it{dll_.begin()};
+    std::advance(it, pos.first);
+    --size_;
+    dll_.erase(it);
+  }
+  return *this;
+}
+template<typename T>
+std::unique_ptr<T> bag<T>::consume(bag_context&ctxt)
+{
+  if (dll_.empty())
+    return nullptr;
+  --size_;
+  auto rval{std::move(dll_.front())};
+  dll_.pop_front();
+  return rval;
+}
+}//namespace tregana
+#endif//BAG
