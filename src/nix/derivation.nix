@@ -2,7 +2,7 @@
 let
   doCheck = false;
 in stdenv.mkDerivation {
-  name = "vae";
+  name = "bag";
   src = ../../.;
   nativeBuildInputs = [cmake];
   buildInputs = [ glibcLocales];
