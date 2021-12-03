@@ -5,7 +5,7 @@ project("bag"
     DESCRIPTION "Bag implementation"
 )
 option(ENABLE_TIME "Measure compilation time" OFF)
-option(ENABLE_TESTS "Build unit tests" ON) #${BUILD_TESTING})
+option(ENABLE_TESTS "Build unit tests" ${BUILD_TESTING})
 option(ENABLE_APPS "Build applications" ON)
 option(ENABLE_CONCEPT "Concept feature" ${BUILD_CONCEPT})
 option(ENABLE_MODULE "Module feature" ${BUILD_MODULE})

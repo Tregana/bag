@@ -15,12 +15,11 @@ template<typename T>
 struct bag
 {
   bag();
-  ~bag() = default;
   auto insert(bag_context&, const T&) noexcept -> bag<T>&;
   auto insert(bag_context&, T&&) noexcept -> bag<T>&;
   auto insert(bag_context&, std::unique_ptr<T>) noexcept -> bag<T>&;
   auto remove(bag_context&, const T&) noexcept -> bag<T>&;
-  auto consume(bag_context&) -> std::unique_ptr<T>;
+  auto consume(bag_context&, size_t = 0) -> std::unique_ptr<T>;
   auto size() const noexcept -> size_t;
   auto contains(const T&) const noexcept -> std::pair<size_t, size_t>;
   auto operator+=(bag<T>&&t) noexcept -> bag<T>&;
@@ -95,27 +94,45 @@ std::pair<size_t, size_t> bag<T>::contains(const T&t) const noexcept
 template<typename T>
 bag<T>& bag<T>::remove(bag_context&ctxt, const T&t) noexcept
 {
-  auto pos = contains(t);
+  auto pos{contains(t)};
   if (pos.first < pos.second)
   {
-    auto it{dll_.begin()};
-    std::advance(it, pos.first);
     ctxt.size = size_.load();
-    --size_;
-    dll_.erase(it);
+    do
+    {
+      auto it{dll_.begin()};
+      std::advance(it, pos.first);
+      --size_;
+      dll_.erase(it);
+      pos = contains(t);
+    }
+    while (pos.first < pos.second);
   }
   return *this;
 }
 template<typename T>
-std::unique_ptr<T> bag<T>::consume(bag_context&ctxt)
+std::unique_ptr<T> bag<T>::consume(bag_context&ctxt, size_t i)
 {
-  if (dll_.empty())
-    return nullptr;
-  ctxt.size = size_;
-  --size_;
-  auto rval{std::move(dll_.front())};
-  dll_.pop_front();
-  return rval;
+  if (not (i or dll_.empty()))
+  {
+    ctxt.size = size_;
+    --size_;
+    auto rval{std::move(dll_.front())};
+    dll_.pop_front();
+    return rval;
+  }
+  else if (i < dll_.size())
+  {
+    auto it{dll_.begin()};
+    std::advance(it, i);
+    ctxt.size = size_;
+    --size_;
+    auto rval{std::move(*it)};
+    dll_.erase(it);
+    return rval;
+
+  }
+  return nullptr;
 }
 template<typename T>
 bag<T>& bag<T>::operator+=(bag<T>&&t) noexcept

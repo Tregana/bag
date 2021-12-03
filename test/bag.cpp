@@ -1,28 +1,41 @@
 #include <bag>
-#include <iostream>
 #include <vector>
 int _Volumes_build_bag_test_bag(int, char*[]) noexcept
 {
   tregana::bag_context c;//one per thread
   {
     tregana::bag<const std::vector<int>> b;
-    const std::vector<int> v0{0, 1, 2, 3}, v1{0, 1, 2}, v2{0, 1};
+    const std::vector<int> v0{0, 1, 2, 3}, v1{0, 1, 2}, v2{0, 1}, v3{0};
     b.insert(c, v0)
      .insert(c, v1)
-     .insert(c, v2);
-    if (const auto h{b.contains(v1)}; h.second < h.first)
+     .insert(c, v1)
+     .insert(c, v2)
+     .insert(c, v3);
+    if (const auto pos{b.contains(v1)}; pos.second < pos.first)
+    {
       return 1;
-    if (const auto h{b.remove(c, v1).contains(v1)}; h.first != h.second)
+    }
+    if (const auto pos{b.remove(c, v1).contains(v1)}; b.size() + 2 != c.size or pos.first != pos.second)
+    {
       return 1;
-    if (const auto v{*b.consume(c)}; v.size() != v0.size() or ! std::equal(v.begin(), v.end(), v0.begin()))
+    }
+    if (const auto v{*b.consume(c)}; b.size() + 1 != c.size or v.size() != v0.size() or ! std::equal(v.begin(), v.end(), v0.begin()))
+    {
       return 1;
+    }
+    if (const auto v{*b.consume(c, 1)}; b.size() + 1 != c.size or v.size() != v3.size() or ! std::equal(v.begin(), v.end(), v3.begin()))
+    {
+      return 1;
+    }
 
     tregana::bag<const std::vector<int>> a;
     a.insert(c, {0, 1, 2, 3, 4});
 
     size_t s{a.size()+b.size()};
     if (auto&& m{std::move(a)+std::move(b)}; m.size() != s)
+    {
       return 1;
+    }
   }
   {
     tregana::bag<const std::vector<int>> b, a, x;
@@ -40,10 +53,14 @@ int _Volumes_build_bag_test_bag(int, char*[]) noexcept
     const auto s{b.size() - a.size()};
     c.size -= (b -= a).first.size;
     if (b.size() != s)
+    {
       return 1;
+    }
     auto r{b -= x};
     if (r.first.size != 0 or b.size() != s)
+    {
       return 1;
+    }
   }
 
   return 0;
