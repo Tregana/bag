@@ -1,6 +1,6 @@
 /* vim: set filetype=cpp: */
-#ifndef BAG
-#define BAG
+#ifndef TREGANA_BAG
+#define TREGANA_BAG
 #include <list>
 #include <memory>
 #include <atomic>
@@ -157,4 +157,4 @@ bag<T>&& operator+(bag<T>&&a, bag<T>&&b)
   return std::move(a);
 }
 }//namespace tregana
-#endif//BAG
+#endif//TREGANA_BAG
